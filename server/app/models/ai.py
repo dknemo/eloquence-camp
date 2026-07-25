@@ -1,6 +1,7 @@
 """AI相关模型"""
-from ..extensions import db
 from datetime import datetime
+
+from ..extensions import db
 
 
 class AiTextRecord(db.Model):

@@ -1,7 +1,8 @@
 """后台 — 操作日志"""
 from flask import request
+
 from ...models.admin import OperationLog
-from ...utils import ok, paginated
+from ...utils import paginated
 from . import admin_bp
 
 

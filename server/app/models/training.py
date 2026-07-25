@@ -1,6 +1,7 @@
 """训练题模型"""
-from ..extensions import db
 from datetime import datetime
+
+from ..extensions import db
 
 
 class TrainingItem(db.Model):

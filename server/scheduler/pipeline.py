@@ -2,11 +2,13 @@
 主编排器 — 串联「获取 → 去重 → 加工 → 入库」全流程
 """
 import time
+
 from app.extensions import db
 from app.models.training import TrainingItem
-from .sources import get_enabled_sources
-from .processor import Processor
+
 from .dedup import DedupManager
+from .processor import Processor
+from .sources import get_enabled_sources
 
 
 class Pipeline:

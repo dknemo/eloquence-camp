@@ -2,7 +2,8 @@
 名言诗词 — 一言(Hitokoto) + 今日诗词(Jinrishici)
 """
 import random
-from typing import List, Dict, Any
+from typing import Any
+
 from ..base import BaseSource
 
 
@@ -65,7 +66,7 @@ class QuotesSource(BaseSource):
             pass
         return None
 
-    def fetch(self) -> List[Dict[str, Any]]:
+    def fetch(self) -> list[dict[str, Any]]:
         max_items = self.config.get('max_items', 3)
         items = []
 

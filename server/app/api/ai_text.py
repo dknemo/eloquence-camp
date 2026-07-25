@@ -3,13 +3,15 @@ AI文案模块 — 生成 / 配额 / 历史
 """
 import json
 from datetime import date
+
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
 from ..extensions import db
-from ..models.ai import AiTextRecord, AiConfig
+from ..models.ai import AiTextRecord
 from ..models.user import UserQuota
 from ..services.qwen_client import qwen_client
-from ..utils import ok, fail, paginated
+from ..utils import fail, ok, paginated
 
 bp = Blueprint('ai_text', __name__)
 

@@ -1,6 +1,7 @@
 """后台管理相关模型"""
-from ..extensions import db
 from datetime import datetime
+
+from ..extensions import db
 
 
 class AdminUser(db.Model):

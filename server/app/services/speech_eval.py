@@ -2,13 +2,12 @@
 语音评测服务 — 阿里云智能语音交互 / Qwen 反馈 / 本地评测
 三层降级：NLS API → Qwen 多模态 → 本地规则
 """
-import os
-import json
-import hashlib
 import logging
-import requests
-import dashscope
+import os
 from datetime import datetime
+
+import dashscope
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +53,6 @@ class SpeechEvaluator:
             return self._nls_token
 
         try:
-            import hmac
-            import hashlib
             import requests
 
             # NLS Token API 需要 AK/SK 签名

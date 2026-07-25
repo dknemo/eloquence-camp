@@ -2,10 +2,12 @@
 文件上传模块 — 音频上传
 """
 import os
-from flask import Blueprint, request, send_file, redirect, current_app
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-from ..services.oss_client import save_audio, UPLOAD_DIR, is_oss_url
-from ..utils import ok, fail
+
+from flask import Blueprint, request, send_file
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
+from ..services.oss_client import UPLOAD_DIR, save_audio
+from ..utils import fail, ok
 
 bp = Blueprint('upload', __name__)
 

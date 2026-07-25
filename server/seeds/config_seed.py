@@ -1,10 +1,11 @@
 """初始化打卡/AI配置默认值"""
 import os
+
 from app import create_app
 from app.extensions import db
-from app.models.checkin import DailyTaskConfig, GrowthGoalConfig
-from app.models.ai import AiConfig
 from app.models.admin import PushTemplate
+from app.models.ai import AiConfig
+from app.models.checkin import DailyTaskConfig, GrowthGoalConfig
 
 app = create_app()
 

@@ -6,16 +6,16 @@
     PYTHONIOENCODING=utf-8 PYTHONPATH=. python scheduler/push_task.py
     PYTHONIOENCODING=utf-8 PYTHONPATH=. python scheduler/push_task.py --type daily_remind
 """
-import sys
-import os
 import argparse
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app
 from app.extensions import db
+from app.models.admin import PushRecord, PushTemplate
 from app.models.user import User
-from app.models.admin import PushTemplate, PushRecord
 from app.services.push import push_service
 
 

@@ -1,13 +1,15 @@
 """后台管理 — 用户管理"""
 from datetime import date, timedelta
+
 from flask import request
-from . import admin_bp
+
 from ...extensions import db
-from ...models.user import User, UserQuota
+from ...models.ai import AiTextRecord
 from ...models.checkin import CheckinRecord
 from ...models.common import PracticeRecord
-from ...models.ai import AiTextRecord
-from ...utils import ok, fail, paginated
+from ...models.user import User, UserQuota
+from ...utils import ok, paginated
+from . import admin_bp
 
 
 @admin_bp.route('/users', methods=['GET'])

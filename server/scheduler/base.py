@@ -2,7 +2,8 @@
 素材源抽象基类
 """
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
+from typing import Any
+
 import requests
 
 
@@ -20,7 +21,7 @@ class BaseSource(ABC):
         })
 
     @abstractmethod
-    def fetch(self) -> List[Dict[str, Any]]:
+    def fetch(self) -> list[dict[str, Any]]:
         """
         从远端获取原始素材。
 
@@ -33,7 +34,7 @@ class BaseSource(ABC):
         """
         ...
 
-    def _safe_get(self, url: str, timeout: int = 15) -> Optional[requests.Response]:
+    def _safe_get(self, url: str, timeout: int = 15) -> requests.Response | None:
         """带错误处理的 HTTP GET"""
         try:
             resp = self.session.get(url, timeout=timeout)

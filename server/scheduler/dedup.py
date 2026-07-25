@@ -1,12 +1,11 @@
 """
 两级去重：源缓存 SHA256 + 数据库标题/内容相似度
 """
-import os
-import json
 import hashlib
+import json
+import os
 import time
-from typing import Optional
-from app.extensions import db
+
 from app.models.training import TrainingItem
 
 

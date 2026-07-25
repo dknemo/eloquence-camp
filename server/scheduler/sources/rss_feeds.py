@@ -5,7 +5,8 @@ RSS 订阅源 — 解析 XML RSS 2.0
 import re
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
-from typing import List, Dict, Any
+from typing import Any
+
 from ..base import BaseSource
 
 
@@ -39,7 +40,7 @@ class RssFeedsSource(BaseSource):
     name = 'rss_feeds'
     label = 'RSS订阅'
 
-    def _parse_feed(self, url: str) -> List[dict]:
+    def _parse_feed(self, url: str) -> list[dict]:
         """解析单个 RSS feed"""
         resp = self._safe_get(url, timeout=20)
         if resp is None:
@@ -74,7 +75,7 @@ class RssFeedsSource(BaseSource):
 
         return items
 
-    def fetch(self) -> List[Dict[str, Any]]:
+    def fetch(self) -> list[dict[str, Any]]:
         urls = self.config.get('urls', [])
         if not urls:
             return []

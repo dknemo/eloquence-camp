@@ -3,6 +3,7 @@
 运行: PYTHONIOENCODING=utf-8 PYTHONPATH=. python app/migrate.py
 """
 from sqlalchemy import inspect, text
+
 from app import create_app
 from app.extensions import db
 

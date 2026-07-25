@@ -1,10 +1,10 @@
 """打卡业务逻辑"""
 from datetime import date, timedelta
+
 from ..extensions import db
-from ..models.checkin import DailyTaskConfig, CheckinRecord
+from ..models.checkin import CheckinRecord, DailyTaskConfig
 from ..models.common import PracticeRecord
 from ..services.growth import apply_growth_rewards
-
 
 DEFAULT_MIN_DURATION = {1: 30, 2: 60, 3: 60}
 

@@ -1,9 +1,10 @@
 """后台管理 — AI配置"""
 from flask import request
-from . import admin_bp
+
 from ...extensions import db
 from ...models.ai import AiConfig
 from ...utils import ok
+from . import admin_bp
 
 
 @admin_bp.route('/ai-config', methods=['GET'])

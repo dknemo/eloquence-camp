@@ -1,11 +1,10 @@
 """
 文件存储服务 — 开发环境存本地，生产环境可切换阿里云 OSS
 """
+import logging
 import os
 import uuid
-import logging
 from datetime import datetime
-from flask import current_app
 
 logger = logging.getLogger(__name__)
 

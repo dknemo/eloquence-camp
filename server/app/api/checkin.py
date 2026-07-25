@@ -1,24 +1,27 @@
 """
 打卡模块 — 今日任务 / 完成任务 / 日历 / 成长目标 / 补签 / 7天入门
 """
-import random
 import logging
+import random
 from datetime import date, timedelta
+
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-from ..extensions import db
-from ..models.user import User
-from ..models.checkin import DailyTaskConfig, CheckinRecord, GrowthGoalConfig
-from ..models.training import TrainingItem
-from ..models.common import PracticeRecord
-from ..models.admin import PushTemplate
-from ..services.checkin_service import (
-    validate_practice_for_task, can_unlock_task, finalize_daily_checkin,
-    min_duration_for, get_task_config,
-)
-from ..services.growth import max_difficulty, LEVEL_LABELS, apply_growth_rewards
+
 from ..data.beginner_course import BEGINNER_COURSE
-from ..utils import ok, fail
+from ..extensions import db
+from ..models.admin import PushTemplate
+from ..models.checkin import CheckinRecord, DailyTaskConfig, GrowthGoalConfig
+from ..models.common import PracticeRecord
+from ..models.training import TrainingItem
+from ..models.user import User
+from ..services.checkin_service import (
+    can_unlock_task,
+    finalize_daily_checkin,
+    validate_practice_for_task,
+)
+from ..services.growth import LEVEL_LABELS, apply_growth_rewards, max_difficulty
+from ..utils import fail, ok
 
 logger = logging.getLogger(__name__)
 bp = Blueprint('checkin', __name__)
@@ -121,9 +124,7 @@ def get_today_status():
             training_item = _pick_training_item(cfg.source_category, user)
 
         status = 'locked'
-        if i == 0:
-            status = 'pending'
-        elif prev_task_index is not None and prev_task_index in completed_task_indices:
+        if i == 0 or prev_task_index is not None and prev_task_index in completed_task_indices:
             status = 'pending'
         if cfg.task_index in completed_task_indices:
             status = 'completed'

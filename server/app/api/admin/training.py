@@ -1,12 +1,13 @@
 """后台管理 — 素材管理（训练题库 + 推荐位）"""
 from flask import request
 from flask_jwt_extended import get_jwt_identity
-from . import admin_bp
+
 from ...extensions import db
-from ...models.training import TrainingItem
 from ...models.common import RecommendConfig
+from ...models.training import TrainingItem
 from ...services.admin_log import log_operation
-from ...utils import ok, fail, paginated
+from ...utils import fail, ok, paginated
+from . import admin_bp
 
 
 def _admin_id():

@@ -1,8 +1,8 @@
 """
 源注册表 — 汇集所有素材源
 """
-from .news_60s import News60sSource
 from .hot_topics import HotTopicsSource
+from .news_60s import News60sSource
 from .quotes import QuotesSource
 from .rss_feeds import RssFeedsSource
 

@@ -2,9 +2,8 @@
 Qwen API 客户端 — 阿里云百炼 DashScope
 """
 import os
-import json
+
 import dashscope
-from http import HTTPStatus
 from dashscope import Generation
 
 
@@ -47,7 +46,7 @@ class QwenClient:
                     'error': f'Qwen API 返回错误: code={response.status_code}, message={response.message}'
                 }
         except Exception as e:
-            return {'success': False, 'error': f'Qwen 调用异常: {str(e)}'}
+            return {'success': False, 'error': f'Qwen 调用异常: {e!s}'}
 
     def generate_text(self, scene_type: str, topic: str, scene_desc: str = '',
                       duration: str = '3min', style: str = '专业正式',

@@ -10,8 +10,8 @@
 
 可配合 Windows 任务计划程序每日定时执行。
 """
-import sys
 import os
+import sys
 
 # 确保 server/ 在 sys.path 中以支持 from app import create_app
 SERVER_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

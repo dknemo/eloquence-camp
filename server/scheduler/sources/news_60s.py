@@ -2,7 +2,8 @@
 60s API — 每日精选新闻 + 微语
 API: https://60s.viki.moe/v2/60s
 """
-from typing import List, Dict, Any
+from typing import Any
+
 from ..base import BaseSource
 
 
@@ -12,7 +13,7 @@ class News60sSource(BaseSource):
 
     API_URL = 'https://60s.viki.moe/v2/60s'
 
-    def fetch(self) -> List[Dict[str, Any]]:
+    def fetch(self) -> list[dict[str, Any]]:
         resp = self._safe_get(self.API_URL, timeout=15)
         if resp is None:
             return []

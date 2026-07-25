@@ -1,18 +1,20 @@
 """后台管理 — 登录 & 数据看板"""
+from datetime import date, timedelta
+
 import bcrypt
-from datetime import date, timedelta, datetime
 from flask import request
 from flask_jwt_extended import create_access_token
 from sqlalchemy import func
-from . import admin_bp
+
 from ...extensions import db
 from ...models.admin import AdminUser
-from ...models.user import User
-from ...models.training import TrainingItem
-from ...models.common import PracticeRecord
-from ...models.checkin import CheckinRecord
 from ...models.ai import AiTextRecord
-from ...utils import ok, fail
+from ...models.checkin import CheckinRecord
+from ...models.common import PracticeRecord
+from ...models.training import TrainingItem
+from ...models.user import User
+from ...utils import fail, ok
+from . import admin_bp
 
 
 @admin_bp.route('/login', methods=['POST', 'OPTIONS'])

@@ -2,9 +2,10 @@
 TTS 语音合成 — 使用 DashScope TTS v2 API (CosyVoice)
 """
 import os
-import dashscope
-from .oss_client import save_tts_audio
 
+import dashscope
+
+from .oss_client import save_tts_audio
 
 # 可用音色: longanyang(男), longxiaochun(女), longxiaoxia(活泼女), longyue(御姐), longcheng, longhua
 DEFAULT_VOICE = 'longanyang'
@@ -47,8 +48,9 @@ class TTSClient:
 
         synthesizer = None
         try:
-            from dashscope.audio.tts_v2 import SpeechSynthesizer
             import asyncio
+
+            from dashscope.audio.tts_v2 import SpeechSynthesizer
 
             # Flask 请求线程可能没有事件循环，需要创建
             try:

@@ -1,14 +1,16 @@
 """用户模块 — 个人信息 / 收藏 / 练习历史"""
-from datetime import datetime, timedelta, date
+from datetime import date, datetime, timedelta
+
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from sqlalchemy import func
+
 from ..extensions import db
-from ..models.user import User
+from ..models.ai import AiTextRecord
 from ..models.common import PracticeRecord, UserFavorite
 from ..models.training import TrainingItem
-from ..models.ai import AiTextRecord
-from ..utils import ok, fail, paginated
+from ..models.user import User
+from ..utils import fail, ok, paginated
 
 bp = Blueprint('user', __name__)
 

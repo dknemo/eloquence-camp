@@ -2,7 +2,8 @@
 蓝图注册
 """
 from flask import Flask
-from . import auth, training, checkin, ai_text, ai_speech, upload, user
+
+from . import ai_speech, ai_text, auth, checkin, training, upload, user
 from .admin import admin_bp
 
 

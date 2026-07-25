@@ -1,10 +1,10 @@
 """后台管理 — 打卡配置（每日任务 + 成长目标）"""
 from flask import request
-from . import admin_bp
+
 from ...extensions import db
 from ...models.checkin import DailyTaskConfig, GrowthGoalConfig
-from ...utils import ok, fail
-
+from ...utils import ok
+from . import admin_bp
 
 # ==================== 每日任务配置 ====================
 

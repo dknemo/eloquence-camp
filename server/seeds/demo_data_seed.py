@@ -4,12 +4,13 @@
 """
 import random
 from datetime import date, datetime, timedelta
+
 from app import create_app
 from app.extensions import db
-from app.models.training import TrainingItem
-from app.models.common import PracticeRecord, UserFavorite, RecommendConfig
 from app.models.checkin import CheckinRecord
-from app.models.user import User, UserQuota
+from app.models.common import PracticeRecord, RecommendConfig, UserFavorite
+from app.models.training import TrainingItem
+from app.models.user import User
 
 app = create_app()
 
@@ -286,7 +287,7 @@ def main():
             db.session.commit()
             print(f'✅ 推荐配置已初始化（{len(RECOMMEND_SLOTS)}个位）')
         else:
-            print(f'ℹ️  推荐配置已存在，跳过')
+            print('ℹ️  推荐配置已存在，跳过')
 
         # 3. 演示数据（仅当无打卡/练习记录时生成）
         users = User.query.all()
@@ -300,7 +301,7 @@ def main():
             print(f'✅ 演示打卡记录已生成（{len(checkin_records)}条）')
         else:
             checkin_records = CheckinRecord.query.all()
-            print(f'ℹ️  打卡记录已存在，跳过')
+            print('ℹ️  打卡记录已存在，跳过')
             # 重新查询以便后续使用
             checkin_records = CheckinRecord.query.all()
 
@@ -312,7 +313,7 @@ def main():
             print(f'✅ 演示练习记录已生成（{len(practice_records)}条）')
         else:
             practice_records = PracticeRecord.query.all()
-            print(f'ℹ️  练习记录已存在，跳过')
+            print('ℹ️  练习记录已存在，跳过')
             practice_records = PracticeRecord.query.all()
 
         if UserFavorite.query.count() == 0 and users and training_items:
@@ -322,7 +323,7 @@ def main():
             db.session.commit()
             print(f'✅ 演示收藏已生成（{len(favorites)}条）')
         else:
-            print(f'ℹ️  收藏已存在，跳过')
+            print('ℹ️  收藏已存在，跳过')
 
         # 4. 更新用户统计数据
         if users:

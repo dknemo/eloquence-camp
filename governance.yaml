@@ -1,0 +1,98 @@
+# 口才训练营 · SCALE OS 治理配置 (适配版)
+# 原 SCALE OS governance DSL v2.1，技术栈改为 uni-app/Flask/SQLite
+# 命令已替换为本项目真实可执行命令
+
+version: "2.1"
+project: "口才训练营 eloquence-camp"
+scenario_mode: "standard"
+gate_profile: "standard"
+generated_at: "2026-07-25"
+adapted_from: "SCALE OS v12.3 hermes config"
+
+# ── 门禁分级 ──────────────────────────────
+profiles:
+  fast-lane:
+    description: "S-level (typo/config/单文件)"
+    gates: [G4, G5]
+    max_changed_files: 10
+  standard:
+    description: "M-level (2-5文件 功能/bugfix)"
+    gates: [G1, G2, G4, G5, G7]
+    evidence_required: true
+  full:
+    description: "L-level (跨模块/重构)"
+    gates: [G1, G2, G4, G5, G6, G7]
+    evidence_required: true
+
+# ── 激活的门禁 (驱动 CI / pre-commit) ─────
+gates:
+  G1:
+    name: "Exploration"
+    active: false
+    blocking: true
+    command: "读文件/命令/测试证据可追溯"
+  G2:
+    name: "Planning"
+    active: true
+    blocking: true
+    command: "计划含边界/风险/验证方式"
+  G4:
+    name: "Lint"
+    active: true
+    blocking: true
+    command: "ruff check server/ && npx prettier --check"
+  G5:
+    name: "Test"
+    active: true
+    blocking: true
+    command: "cd server && pytest"
+  G6:
+    name: "Build"
+    active: true
+    blocking: true
+    command: "miniapp/h5/admin npm run build"
+  G7:
+    name: "Security"
+    active: true
+    blocking: true
+    command: "grep 密钥硬编码扫描"
+
+# ── 工程标准 ──────────────────────────────
+engineering_standards:
+  python:
+    formatter: ruff
+    type_hints_required: true
+    min_coverage: 40
+  frontend:
+    framework: uni-app (Vue3)
+    formatter: prettier
+    eslint: deferred  # 暂不做重 lint，避免过度工程
+  testing:
+    framework: pytest
+    tdd_enforced: false
+    min_test_count: 1
+
+# ── 资源治理 ──────────────────────────────
+resources:
+  git_policy:
+    canonical_docs: commit          # README, HERMES.md, docs/
+    task_artifacts: commit-summary-only
+    generated_evidence: ignore-by-default  # 截图/录屏不入库
+    temporary_work_files: ignore-by-default # tmp/, 一次性脚本
+  forbidden_paths:
+    - "C:\\Users\\zjjzo\\Downloads"   # 禁止在此创建脚本/测试
+
+# ── 验证 profile ─────────────────────────
+verification_profiles:
+  fast:
+    required: [G5]
+    optional: [G4]
+  default:
+    required: [G4, G5]
+    optional: [G6]
+  release:
+    required: [G4, G5, G6, G7]
+
+# ── 运行门禁 ──────────────────────────────
+# 本地: pre-commit run --all-files
+# CI:  .github/workflows/ci.yml (PR 触发)

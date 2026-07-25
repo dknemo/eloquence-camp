@@ -4,9 +4,9 @@ AI 处理器 — 将原始素材通过 Qwen 加工为训练题字段
 import json
 import re
 import time
-from typing import Optional, Dict, Any
-from app.services.qwen_client import qwen_client
+from typing import Any
 
+from app.services.qwen_client import qwen_client
 
 # ── Prompt 模板 ──
 PROCESS_PROMPT = """你是一位专业口才训练内容编辑。你的任务是将外部素材转化为适合口才练习的训练题。
@@ -43,7 +43,7 @@ class Processor:
         self.timeout = config.get('qwen_timeout', 30)
         self.delay = config.get('inter_item_delay', 2.0)
 
-    def process(self, raw: dict) -> Optional[Dict[str, Any]]:
+    def process(self, raw: dict) -> dict[str, Any] | None:
         """
         加工一条原始素材，返回 TrainingItem 构造字段或 None
 
@@ -79,7 +79,7 @@ class Processor:
 
         return self._parse_response(result['content'], raw)
 
-    def _parse_response(self, raw_text: str, raw: dict) -> Optional[Dict[str, Any]]:
+    def _parse_response(self, raw_text: str, raw: dict) -> dict[str, Any] | None:
         """解析 Qwen 返回的 JSON"""
         text = raw_text.strip()
 

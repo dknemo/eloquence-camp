@@ -1,11 +1,12 @@
 """后台管理 — 消息推送（真实 DB + 微信 API）"""
 from flask import request
-from . import admin_bp
+
 from ...extensions import db
 from ...models.admin import PushRecord, PushTemplate
 from ...models.user import User
 from ...services.push import push_service
-from ...utils import ok, fail, paginated
+from ...utils import ok, paginated
+from . import admin_bp
 
 
 @admin_bp.route('/push-templates', methods=['GET'])

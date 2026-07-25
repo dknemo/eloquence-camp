@@ -2,7 +2,8 @@
 热搜话题 — 多平台热搜聚合 API
 API: https://orz.ai/api/v1/dailynews/?platform=weibo
 """
-from typing import List, Dict, Any
+from typing import Any
+
 from ..base import BaseSource
 
 
@@ -12,7 +13,7 @@ class HotTopicsSource(BaseSource):
 
     API_URL = 'https://orz.ai/api/v1/dailynews/?platform=weibo'
 
-    def fetch(self) -> List[Dict[str, Any]]:
+    def fetch(self) -> list[dict[str, Any]]:
         resp = self._safe_get(self.API_URL, timeout=15)
         if resp is None:
             return []

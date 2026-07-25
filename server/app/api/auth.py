@@ -3,9 +3,10 @@
 """
 from flask import Blueprint, request
 from flask_jwt_extended import create_access_token
-from ..models.user import User
+
 from ..extensions import db
-from ..utils import ok, fail
+from ..models.user import User
+from ..utils import fail, ok
 
 bp = Blueprint('auth', __name__)
 

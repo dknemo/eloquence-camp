@@ -3,8 +3,8 @@
 Loop Engineering 验证脚本 — 代码改动后自动运行
 用法: PYTHONIOENCODING=utf-8 PYTHONPATH=. python verify.py
 """
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -14,8 +14,9 @@ from app import create_app
 def check_db_health(app):
     """检查数据库连接和表完整性"""
     with app.app_context():
-        from app.extensions import db
         from sqlalchemy import inspect
+
+        from app.extensions import db
         try:
             inspector = inspect(db.engine)
             tables = inspector.get_table_names()
@@ -52,9 +53,9 @@ def check_api_health():
 def check_training_data(app):
     """检查训练数据完整性"""
     with app.app_context():
-        from app.models.training import TrainingItem
-        from app.models.checkin import DailyTaskConfig, GrowthGoalConfig
         from app.models.ai import AiConfig
+        from app.models.checkin import DailyTaskConfig, GrowthGoalConfig
+        from app.models.training import TrainingItem
 
         training_count = TrainingItem.query.count()
         tasks_count = DailyTaskConfig.query.count()
@@ -81,9 +82,9 @@ def check_training_data(app):
             print(f'  ✅ 成长目标: {goals_count} 条配置')
 
         if ai_config:
-            print(f'  ✅ AI配置: 已初始化')
+            print('  ✅ AI配置: 已初始化')
         else:
-            print(f'  ⚠️  AI配置: 未初始化')
+            print('  ⚠️  AI配置: 未初始化')
             ok = False
 
         return ok
@@ -109,7 +110,7 @@ def check_miniapp_build():
             print('  ✅ 小程序编译通过')
             return True
         else:
-            print(f'  ⚠️  小程序编译输出不明确')
+            print('  ⚠️  小程序编译输出不明确')
             return False
     except Exception as e:
         print(f'  ⚠️  小程序编译检查跳过: {e}')

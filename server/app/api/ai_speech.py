@@ -2,12 +2,13 @@
 AI语音评测 + TTS 语音合成
 """
 from flask import Blueprint, request
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
 from ..extensions import db
 from ..models.common import PracticeRecord
 from ..services.speech_eval import speech_evaluator
 from ..services.tts_client import tts_client
-from ..utils import ok, fail
+from ..utils import fail, ok
 
 bp = Blueprint('ai_speech', __name__)
 

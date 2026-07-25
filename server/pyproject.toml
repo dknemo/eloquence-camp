@@ -1,0 +1,35 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+exclude = [".venv", "__pycache__", "node_modules"]
+
+[tool.ruff.lint]
+select = [
+    "F",    # pyflakes: 未定义/未使用
+    "E9",   # 语法错误
+    "I",    # isort import 排序
+    "B",    # bugbear: 易错写法
+    "S",    # bandit: 安全
+]
+ignore = [
+    "E501", # 行过长 (存量)
+    "F401", # 未使用导入 (已自动修大部分)
+    "F841", # 未使用变量 (存量)
+    "B007", # 循环变量未使用 (存量 for i in range)
+    "B008", # 函数参数默认调用 (Flask 常用)
+    "S101", # 允许 assert (测试)
+    "S102", # exec 调用 (存量)
+    "S104", # 绑定 0.0.0.0 (开发环境预期)
+    "S105", # 硬编码密码字符串 (占位符)
+    "S106", # 硬编码密码 (占位符)
+    "S110", # try-except pass (存量防御写法)
+    "S314", # xml 相关 (存量)
+    "S603", # subprocess 调用 (verify.py 用)
+    "S607", # subprocess 部分路径
+    "S311", # 伪随机 (占位)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F", "B"]
+"seeds/*" = ["F401", "F841"]
+"verify.py" = ["F", "B"]

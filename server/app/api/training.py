@@ -2,12 +2,13 @@
 训练题库模块
 """
 from flask import Blueprint, request
-from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
 from ..extensions import db
 from ..models.training import TrainingItem
 from ..models.user import User
-from ..services.growth import max_difficulty, LEVEL_LABELS
-from ..utils import ok, fail, paginated
+from ..services.growth import LEVEL_LABELS, max_difficulty
+from ..utils import fail, ok, paginated
 
 bp = Blueprint('training', __name__)
 

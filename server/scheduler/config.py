@@ -1,9 +1,8 @@
 """
 配置加载 — 三层覆盖：默认值 < config.json < 环境变量
 """
-import os
 import json
-
+import os
 
 DEFAULT_CONFIG = {
     'sources': {
@@ -51,7 +50,7 @@ def load_config():
             with open(config_path, 'r', encoding='utf-8') as f:
                 file_config = json.load(f)
                 _deep_merge(config, file_config)
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             print(f'[WARN] config.json 读取失败，使用默认配置: {e}')
 
     # 环境变量覆盖

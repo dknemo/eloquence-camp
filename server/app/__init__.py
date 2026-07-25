@@ -2,6 +2,7 @@
 Flask 工厂函数
 """
 from flask import Flask
+
 from .config import config_map
 from .extensions import init_extensions
 
