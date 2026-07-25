@@ -14,6 +14,8 @@ class PracticeRecord(db.Model):
     ai_score = db.Column(db.SmallInteger)
     dimension_scores = db.Column(db.JSON)
     ai_feedback = db.Column(db.Text)
+    ai_transcription = db.Column(db.Text, default='')
+    ai_powered = db.Column(db.Boolean, default=False)
     source = db.Column(db.String(20), default='free_practice')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
