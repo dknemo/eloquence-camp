@@ -2,7 +2,7 @@
  * uni.request 封装 — 自动注入Token / 统一错误处理
  */
 // #ifdef MP-WEIXIN
-const BASE_URL = 'http://192.168.1.234:5000/api'
+const BASE_URL = 'http://172.23.136.229:5000/api'
 // #endif
 
 // #ifndef MP-WEIXIN

@@ -118,8 +118,11 @@ def _calc_my_rank(user, items, lb_type, value_fn):
 
 
 def _get_user():
-    """从JWT获取当前用户"""
-    verify_jwt_in_request()
+    """从JWT获取当前用户（可选登录，无token返回None）"""
+    try:
+        verify_jwt_in_request(optional=True)
+    except Exception:
+        return None
     identity = get_jwt_identity()
     user_id = int(identity) if identity else None
     return User.query.get(user_id) if user_id else None
@@ -127,20 +130,29 @@ def _get_user():
 
 @bp.route('/profile', methods=['GET'])
 def get_profile():
-    """获取用户个人信息"""
+    """获取用户个人信息（匿名可访问，返回默认空用户）"""
     user = _get_user()
     if not user:
-        return fail(401, '请先登录')
+        # 未登录时返回默认匿名用户结构，避免小程序因 401 弹"网络异常"
+        return ok({
+            'id': None,
+            'nickname': '微信用户',
+            'avatar_url': '',
+            'growth_level': 'newbie',
+            'continuous_days': 0,
+            'total_practice_minutes': 0,
+            'is_anonymous': True,
+        })
     return ok(user.to_dict())
 
 
 @bp.route('/profile/subscribe', methods=['PUT'])
 def update_subscribe():
-    """更新用户订阅状态"""
+    """更新用户订阅状态（匿名可调用，仅登录时落库）"""
     user = _get_user()
     if not user:
-        return fail(401, '请先登录')
-    data = request.get_json()
+        return ok({'subscribe_status': False, 'anonymous': True})
+    data = request.get_json() or {}
     if 'subscribe_status' in data:
         user.subscribe_status = bool(data['subscribe_status'])
         db.session.commit()
@@ -149,16 +161,16 @@ def update_subscribe():
 
 @bp.route('/favorites', methods=['GET'])
 def list_favorites():
-    """获取用户收藏列表"""
+    """获取用户收藏列表（匿名返回空列表）"""
     user = _get_user()
     if not user:
-        return fail(401, '请先登录')
+        return paginated([], {'page': 1, 'page_size': 20, 'total': 0})
 
     page = request.args.get('page', 1, type=int)
     page_size = request.args.get('page_size', 20, type=int)
     item_type = request.args.get('item_type', 'training_item')
 
-    query = UserFavorite.query.filter_by(user_id=user.id, item_type=item_type)\
+    query = UserFavorite.query.filter_by(user_id=user.id, item_type=item_type) \
         .order_by(UserFavorite.created_at.desc())
     total = query.count()
     favs = query.offset((page - 1) * page_size).limit(page_size).all()
@@ -188,10 +200,10 @@ def list_favorites():
 
 @bp.route('/favorites/toggle', methods=['POST'])
 def toggle_favorite():
-    """切换收藏状态"""
+    """切换收藏状态（匿名仅返回提示，不报错）"""
     user = _get_user()
     if not user:
-        return fail(401, '请先登录')
+        return ok({'is_favorited': False, 'anonymous': True, 'message': '登录后可收藏'})
 
     data = request.get_json()
     item_type = data.get('item_type', 'training_item')
@@ -216,15 +228,15 @@ def toggle_favorite():
 
 @bp.route('/practice-records', methods=['GET'])
 def list_practices():
-    """获取用户练习记录"""
+    """获取用户练习记录（匿名返回空列表）"""
     user = _get_user()
     if not user:
-        return fail(401, '请先登录')
+        return paginated([], {'page': 1, 'page_size': 20, 'total': 0})
 
     page = request.args.get('page', 1, type=int)
     page_size = request.args.get('page_size', 20, type=int)
 
-    query = PracticeRecord.query.filter_by(user_id=user.id)\
+    query = PracticeRecord.query.filter_by(user_id=user.id) \
         .order_by(PracticeRecord.created_at.desc())
     total = query.count()
     records = query.offset((page - 1) * page_size).limit(page_size).all()

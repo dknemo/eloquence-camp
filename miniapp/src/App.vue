@@ -21,12 +21,18 @@ onShow(() => {
 
 async function doLogin() {
   try {
-    // 1. 调用微信登录获取code
-    const loginRes = await uni.login()
-    const code = loginRes.code
+    // 1. 调用微信登录获取code（测试号环境可能拿不到，用兜底code）
+    let code = ''
+    try {
+      const loginRes = await uni.login()
+      code = loginRes.code || ''
+    } catch (e) {
+      console.warn('uni.login 异常，使用兜底 code', e)
+    }
     if (!code) {
-      console.warn('wx.login 未返回code')
-      return
+      // 测试号/无 AppID 环境兜底，后端 wechat-login 接受任意 code 走 mock
+      code = 'dev_' + Date.now()
+      console.warn('使用兜底 code 登录:', code)
     }
 
     // 2. 发送code到后端换取JWT
@@ -55,7 +61,7 @@ async function doLogin() {
 
 function getBaseUrl() {
   // #ifdef MP-WEIXIN
-  return 'http://192.168.1.234:5000/api'
+  return 'http://172.23.136.229:5000/api'
   // #endif
   // #ifndef MP-WEIXIN
   return 'https://api.your-domain.com/api'
