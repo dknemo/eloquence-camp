@@ -54,9 +54,31 @@
         </view>
         <ScoreRadar :scores="result.dimension_scores" :size="220" />
         <text class="rfb">{{result.ai_feedback}}</text>
-        <!-- 回放录音按钮 -->
-        <view v-if="userAudioUrl" class="replay-btn" @tap="replayRecording">
-          <text>{{replayStatus}}</text>
+        <!-- 回放录音控件 -->
+        <view v-if="userAudioUrl" class="replay-section">
+          <view class="replay-header">
+            <text class="replay-title">🎤 我的录音</text>
+            <text class="replay-status">{{ replayStatus }}</text>
+          </view>
+          <view class="replay-controls">
+            <button class="replay-btn" @tap="replayRecording">
+              {{ replayStatus.includes('暂停') ? '⏸ 暂停' : '▶ 播放' }}
+            </button>
+            <button class="replay-btn" @tap="restartReplay">
+              🔄 重播
+            </button>
+          </view>
+          <view class="replay-progress">
+            <slider 
+              :value="replayProgress.percent" 
+              @change="seekTo"
+              activeColor="#007AFF"
+              backgroundColor="#e0e0e0"
+              block-size="14"
+              show-value
+            />
+            <text class="replay-time">{{ formatTime(replayProgress.currentTime) }} / {{ formatTime(replayProgress.duration) }}</text>
+          </view>
         </view>
         <view class="share-row">
           <button size="mini" class="share-btn" @tap="openPoster">分享成绩</button>
@@ -173,17 +195,88 @@ function initAudio(){
 }
 
 // ========== 回放自己的录音 ==========
+let replayTimer = null
+const replayProgress = reactive({ currentTime: 0, duration: 0, percent: 0 })
+
 function replayRecording(){
   if(!userAudioUrl.value) return
-  if(replayStatus.value==='⏸ 暂停回放'){
+  
+  // 如果正在播放，暂停
+  if(replayStatus.value === '⏸ 暂停回放'){
     replayContext.pause()
-    replayStatus.value='🔊 回放我的录音'
+    replayStatus.value = '▶ 继续回放'
     return
   }
-  const fullUrl=userAudioUrl.value.startsWith('http')?userAudioUrl.value:(BASE_API.replace('/api','')+userAudioUrl.value)
-  replayContext.src=fullUrl
-  replayContext.play()
-  replayStatus.value='⏸ 暂停回放'
+  
+  // 如果是初始状态或已暂停，重新播放
+  if(replayStatus.value === '▶ 继续回放' || replayStatus.value === '🔊 回放我的录音'){
+    const fullUrl = userAudioUrl.value.startsWith('http') ? userAudioUrl.value : (BASE_API.replace('/api', '') + userAudioUrl.value)
+    replayContext.src = fullUrl
+    replayContext.play()
+    replayStatus.value = '⏸ 暂停回放'
+    
+    // 重置进度
+    replayProgress.currentTime = 0
+    replayProgress.duration = 0
+    replayProgress.percent = 0
+    
+    // 清除旧定时器
+    if (replayTimer) clearInterval(replayTimer)
+    
+    // 监听音频进度更新
+    replayContext.onTimeUpdate(() => {
+      replayProgress.currentTime = replayContext.currentTime
+      replayProgress.duration = replayContext.duration
+      replayProgress.percent = replayContext.duration > 0 ? (replayContext.currentTime / replayContext.duration * 100) : 0
+    })
+    
+    // 每 500ms 更新一次 UI
+    replayTimer = setInterval(() => {
+      if (replayContext.currentTime > 0 && replayContext.duration > 0) {
+        replayProgress.currentTime = replayContext.currentTime
+        replayProgress.duration = replayContext.duration
+        replayProgress.percent = replayContext.currentTime / replayContext.duration * 100
+      }
+    }, 500)
+    
+    // 播放结束
+    replayContext.onEnded(() => {
+      replayStatus.value = '▶ 回放完成'
+      replayProgress.percent = 100
+      if (replayTimer) clearInterval(replayTimer)
+    })
+  }
+}
+
+// 重新开始回放
+function restartReplay(){
+  if(userAudioUrl.value){
+    const fullUrl = userAudioUrl.value.startsWith('http') ? userAudioUrl.value : (BASE_API.replace('/api', '') + userAudioUrl.value)
+    replayContext.src = fullUrl
+    replayContext.seek(0)
+    replayContext.play()
+    replayStatus.value = '⏸ 暂停回放'
+    replayProgress.currentTime = 0
+    replayProgress.percent = 0
+    if (replayTimer) clearInterval(replayTimer)
+    replayTimer = setInterval(() => {
+      if (replayContext.currentTime > 0 && replayContext.duration > 0) {
+        replayProgress.currentTime = replayContext.currentTime
+        replayProgress.duration = replayContext.duration
+        replayProgress.percent = replayContext.currentTime / replayContext.duration * 100
+      }
+    }, 500)
+  }
+}
+
+// 调整进度
+function seekTo(percent){
+  if(replayContext.duration > 0){
+    const seekTime = replayContext.duration * percent / 100
+    replayContext.seek(seekTime)
+    replayProgress.percent = percent
+    replayProgress.currentTime = seekTime
+  }
 }
 
 // ========== 播放范本 ==========
@@ -213,7 +306,7 @@ async function playSample(){
     try{
       const payload={text:item.value.sample_text.substring(0,200)}
       if(item.value.id) payload.training_item_id=item.value.id
-      const data=await api.post('/ai-speech/tts',payload)
+      const data=await api.post('/ai-speech/tts',payload, { timeout: 30000 })
       uni.hideLoading()
       if(data.audio_url){
         // 缓存到本地，下次直接复用
@@ -230,7 +323,8 @@ async function playSample(){
     }catch(e){
       uni.hideLoading()
       sampleStatus.value='▶ 播放范本'
-      uni.showToast({title:'TTS服务未配置API Key',icon:'none'})
+      console.error('TTS 失败:', e)
+      uni.showToast({title:'TTS 服务暂时不可用',icon:'none'})
     }
   }else{
     uni.showToast({title:'暂无范本内容',icon:'none'})
@@ -497,6 +591,14 @@ onUnload(()=>{
 .lock-banner{background:#FFF7E6;border-radius:12rpx;padding:16rpx;margin-top:12rpx;color:#D48806;font-size:24rpx}
 .last-practice{font-size:22rpx;color:#999;margin-top:8rpx;display:block}
 .replay-btn:active{background:var(--hero-to)}
+.replay-section{margin-top:20rpx;padding:20rpx;background:var(--bg-card);border-radius:16rpx}
+.replay-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16rpx}
+.replay-title{font-size:28rpx;font-weight:bold;color:#333}
+.replay-status{font-size:24rpx;color:#666}
+.replay-controls{display:flex;gap:16rpx;margin-bottom:16rpx}
+.replay-controls .replay-btn{flex:1;height:72rpx;line-height:72rpx;font-size:26rpx;border-radius:36rpx;background:var(--brand-primary);color:#fff}
+.replay-progress{margin-top:12rpx}
+.replay-time{font-size:22rpx;color:#999;text-align:center;display:block;margin-top:8rpx}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .analyzing-box{display:flex;flex-direction:column;align-items:center;gap:12rpx;padding:40rpx 0}
