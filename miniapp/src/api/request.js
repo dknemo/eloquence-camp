@@ -2,7 +2,7 @@
  * uni.request 封装 — 自动注入Token / 统一错误处理
  */
 // #ifdef MP-WEIXIN
-const BASE_URL = 'http://192.168.200.214:5000/api'
+const BASE_URL = 'https://bunny-recommends-frank-presently.trycloudflare.com/api'
 // #endif
 
 // #ifndef MP-WEIXIN
