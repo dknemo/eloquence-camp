@@ -8,7 +8,7 @@ on:
 
 jobs:
   python:
-    name: Server lint + test
+    name: python
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,7 +34,7 @@ jobs:
           python -m pytest tests/ -q || echo "NO_TESTS_OR_FAIL"
 
   security:
-    name: Secret scan
+    name: security
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,7 +50,7 @@ jobs:
           echo "secret scan passed"
 
   frontend-build:
-    name: Frontend build check
+    name: frontend-build
     runs-on: ubuntu-latest
     strategy:
       matrix:
