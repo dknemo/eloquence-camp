@@ -38,6 +38,13 @@
         <view class="up-bar"><view class="up-fill" :style="{width:uploadProgress+'%'}"></view></view>
       </view>
 
+      <!-- 分析中 -->
+      <view v-if="analyzing && !result" class="rs analyzing-box">
+        <view class="spinner"></view>
+        <text class="rt" style="font-size:28rpx">AI 正在分析你的表现…</text>
+        <text class="rt" style="font-size:22rpx;color:#999">正在转写语音并生成点评，请稍候</text>
+      </view>
+
       <!-- 评测结果 -->
       <view v-if="result" class="ra">
         <text class="rsc">综合评分 {{result.ai_score}}分</text>
@@ -78,7 +85,7 @@ import Poster from '@/components/poster.vue'
 import ScoreRadar from '@/components/ScoreRadar.vue'
 import { savePendingUpload, retryPendingUploads } from '@/utils/recordingCache'
 
-const item=ref(null),playing=ref(false),recording=ref(false),paused=ref(false),uploading=ref(false),timer=ref(0),result=ref(null),uploadProgress=ref(0)
+const item=ref(null),playing=ref(false),recording=ref(false),paused=ref(false),uploading=ref(false),analyzing=ref(false),timer=ref(0),result=ref(null),uploadProgress=ref(0)
 const waveHeights=reactive([20,30,40,50,40,30]),isFavorited=ref(false),userAudioUrl=ref(''),replayStatus=ref('🔊 回放我的录音')
 const showPoster=ref(false),posterData=ref({})
 let ti=null,wi=null,recorderManager=null,audioContext=null,replayContext=null,taskIndex=null,minDuration=30,lastRecordId=null
@@ -283,6 +290,7 @@ function uploadAudio(filePath,duration){
 // ========== 语音评测 ==========
 async function evaluateAudio(audioUrl,duration){
   try{
+    analyzing.value=true
     const data=await api.post('/ai-speech/evaluate',{
       audio_url:audioUrl,
       reference_text:item.value?.sample_text||'',
@@ -305,6 +313,8 @@ async function evaluateAudio(audioUrl,duration){
       ai_feedback:'评测服务暂不可用，请稍后重试'
     }
     await completeCheckinTask(Math.round(duration||timer.value), null)
+  }finally{
+    analyzing.value=false
   }
 }
 
@@ -488,4 +498,7 @@ onUnload(()=>{
 .last-practice{font-size:22rpx;color:#999;margin-top:8rpx;display:block}
 .replay-btn:active{background:var(--hero-to)}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.analyzing-box{display:flex;flex-direction:column;align-items:center;gap:12rpx;padding:40rpx 0}
+.spinner{width:60rpx;height:60rpx;border:4rpx solid #e8f4f8;border-top-color:var(--brand-primary);border-radius:50%;animation:spin .8s linear infinite}
 </style>
