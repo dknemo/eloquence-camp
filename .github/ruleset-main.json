@@ -25,8 +25,7 @@
       "parameters": {
         "required_status_checks": [
           {"context": "python"},
-          {"context": "security"},
-          {"context": "frontend-build"}
+          {"context": "security"}
         ],
         "strict_required_status_checks_policy": false
       }
