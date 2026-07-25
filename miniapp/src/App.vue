@@ -61,7 +61,7 @@ async function doLogin() {
 
 function getBaseUrl() {
   // #ifdef MP-WEIXIN
-  return 'http://192.168.200.214:5000/api'
+  return 'https://bunny-recommends-frank-presently.trycloudflare.com/api'
   // #endif
   // #ifndef MP-WEIXIN
   return 'https://api.your-domain.com/api'
