@@ -83,26 +83,35 @@ class SpeechEvaluator:
 
     # ---- ASR 转写 ----
 
-    def _resolve_local_path(self, audio_url: str) -> str:
-        """把后端返回的相对 audio_url 解析为本地文件绝对路径"""
-        # 已经是本地路径或 file:// 形式
-        if audio_url.startswith('file://'):
+    def _resolve_asr_input(self, audio_url: str) -> str:
+        """把 audio_url 解析为 Paraformer 可用的输入（必须是公网可访问 URL 或 OSS URL）
+
+        Paraformer 文件转写不支持 file:// 本地路径（会 DECODE_ERROR），
+        因此本地存储的音频需通过公网 URL 暴露（cloudflared 隧道 / 固定域名 / OSS）。
+        """
+        from ..services.oss_client import is_oss_url, get_absolute_path
+
+        # OSS / 公网 URL 直接用
+        if is_oss_url(audio_url) or audio_url.startswith('http'):
             return audio_url
-        if audio_url.startswith('/'):
-            # 相对路径如 /api/upload/audio/xxx.mp3 → 映射到 uploads 目录
-            fname = os.path.basename(audio_url)
-            # 向上找 uploads/audio
-            base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            cand = os.path.join(base, 'uploads', 'audio', fname)
-            if os.path.exists(cand):
-                return f'file://{cand}'
-            return audio_url
-        # 公网 URL（OSS / 隧道域名）
+
+        # 本地相对路径 -> 拼公网 URL
+        clean = audio_url.lstrip('/')
+        if clean.startswith('api/upload/'):
+            clean = clean[len('api/upload/'):]
+        public_base = os.environ.get('PUBLIC_BASE_URL', '').rstrip('/')
+        if public_base:
+            return f'{public_base}/api/upload/{clean}'
+
+        # 兜底：用本地绝对路径（多数情况会 DECODE_ERROR，仅作降级）
+        abs_path = get_absolute_path(clean)
+        if os.path.exists(abs_path):
+            return f'file://{abs_path}'
         return audio_url
 
     def _transcribe(self, audio_url: str) -> str | None:
         """Paraformer-v2 转写，返回文本或 None"""
-        file_ref = self._resolve_local_path(audio_url)
+        file_ref = self._resolve_asr_input(audio_url)
         try:
             resp = Transcription.call(
                 model=self.ASR_MODEL,
@@ -115,16 +124,47 @@ class SpeechEvaluator:
                 return None
             # 等待结果
             final = Transcription.wait(resp.output.task_id, api_key=self._api_key)
-            # 解析结果
+            # 解析结果（paraformer-v2 结果在 results[].results[] 或 transcription_url）
             results = final.output.get('results', [])
             if not results:
                 return None
             sentences = []
             for r in results:
                 for sub in r.get('results', []):
+                    # 优先取 transcript 字段
                     txt = sub.get('transcript', '')
                     if txt:
                         sentences.append(txt)
+                    # 若有 transcription_url，下载 JSON 取真实转写
+                    turl = sub.get('transcription_url') or r.get('transcription_url')
+                    if not txt and turl:
+                        try:
+                            import json as _json
+                            import urllib.request
+                            with urllib.request.urlopen(turl, timeout=15) as resp:
+                                data = _json.loads(resp.read().decode('utf-8'))
+                            # 兼容多种返回结构
+                            if isinstance(data, dict):
+                                # paraformer-v2 标准: {transcripts:[{text, sentences:[{text}]}]}
+                                for tr in data.get('transcripts', []):
+                                    subs = tr.get('sentences')
+                                    if subs:
+                                        sentences_text = ''.join(
+                                            s.get('text', '') for s in subs
+                                        ).strip()
+                                        if sentences_text:
+                                            sentences.append(sentences_text)
+                                            continue
+                                    if tr.get('text'):
+                                        sentences.append(tr['text'])
+                                # 兜底顶层 text
+                                if not sentences and data.get('text'):
+                                    sentences.append(data['text'])
+                            elif isinstance(data, list):
+                                for item in data:
+                                    sentences.append(item.get('text', '') or item.get('transcript', ''))
+                        except Exception as ex:
+                            logger.warning('下载 transcription_url 失败: %s', ex)
             text = ''.join(sentences).strip()
             return text or None
         except Exception as e:
