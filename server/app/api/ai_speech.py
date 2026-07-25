@@ -62,6 +62,8 @@ def evaluate():
             ai_score=result['score'],
             dimension_scores=result['dimensions'],
             ai_feedback=result['feedback'],
+            ai_transcription=result.get('transcription', ''),
+            ai_powered=result.get('ai_powered', False),
             source='training'
         )
         db.session.add(record)
