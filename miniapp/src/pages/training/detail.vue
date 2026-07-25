@@ -288,7 +288,7 @@ async function evaluateAudio(audioUrl,duration){
       reference_text:item.value?.sample_text||'',
       duration:Math.round(duration||timer.value),
       training_item_id:item.value?.id
-    })
+    }, { timeout: 60000 })
     result.value={
       ai_score:data.ai_score,
       dimension_scores:data.dimension_scores,
