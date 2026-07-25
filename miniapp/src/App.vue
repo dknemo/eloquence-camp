@@ -61,7 +61,7 @@ async function doLogin() {
 
 function getBaseUrl() {
   // #ifdef MP-WEIXIN
-  return 'http://172.23.136.229:5000/api'
+  return 'http://192.168.200.214:5000/api'
   // #endif
   // #ifndef MP-WEIXIN
   return 'https://api.your-domain.com/api'
