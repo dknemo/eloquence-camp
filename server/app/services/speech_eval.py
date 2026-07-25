@@ -1,355 +1,322 @@
 """
-语音评测服务 — 阿里云智能语音交互 / Qwen 反馈 / 本地评测
-三层降级：NLS API → Qwen 多模态 → 本地规则
+语音评测服务 — 真实 AI 评测（阿里云百炼 DashScope）
+流程：录音文件 → Paraformer-v2 ASR 转写 → Qwen 五维点评 + 反馈
+
+依赖：
+- DASHSCOPE_API_KEY（.env 配置，阿里云百炼 API Key）
+- dashscope >= 1.25（Paraformer / Qwen）
+
+降级策略：
+- Level 1: ASR 转写 + Qwen 五维点评（完整真实评测）
+- Level 2: 若 ASR 失败，仅用 Qwen 基于参考文本 + 时长给反馈（无转写）
+- Level 3: 若 Qwen 也失败，本地规则兜底（基于时长，标注"未启用AI"）
 """
 import logging
 import os
-from datetime import datetime
+import re
 
 import dashscope
-import requests
+from dashscope.audio.asr import Transcription
 
 logger = logging.getLogger(__name__)
 
+# 五维维度
+DIMENSIONS = ['pronunciation', 'fluency', 'completeness', 'content', 'expressiveness']
+DIM_CN = {
+    'pronunciation': '发音准确度',
+    'fluency': '语速流畅度',
+    'completeness': '内容完整度',
+    'content': '内容质量',
+    'expressiveness': '表达感染力',
+}
+
 
 class SpeechEvaluator:
-    """语音评测客户端 — 多层降级策略"""
+    """真实语音评测客户端 — ASR 转写 + Qwen 点评"""
 
-    NLS_HOST = 'https://nlsapi.aliyun.com'
+    ASR_MODEL = 'paraformer-v2'
+    FEEDBACK_MODEL = 'qwen-plus'  # 文本点评模型
 
     def __init__(self):
         self._initialized = False
-        self._app_key = None
-        self._ak_id = None
-        self._ak_secret = None
-        self._nls_token = None
-        self._nls_token_expire = 0
+        self._api_key = ''
 
     def _ensure_init(self):
         if self._initialized:
             return
-        self._app_key = os.environ.get('ALIYUN_SPEECH_APP_KEY', '')
-        self._ak_id = os.environ.get('ALIYUN_SPEECH_ACCESS_KEY_ID', '')
-        self._ak_secret = os.environ.get('ALIYUN_SPEECH_ACCESS_KEY_SECRET', '')
-        # DashScope API Key（用于 Qwen 文本生成 + Qwen-Audio 多模态评测）
-        dash_key = os.environ.get('DASHSCOPE_API_KEY', '')
-        if dash_key and dash_key != 'your-dashscope-api-key':
-            dashscope.api_key = dash_key
+        self._api_key = os.environ.get('DASHSCOPE_API_KEY', '')
+        if self._api_key and self._api_key != 'your-dashscope-api-key':
+            dashscope.api_key = self._api_key
         self._initialized = True
 
-    # ---- NLS Token ----
-
-    def _has_nls_credentials(self):
-        """是否配置了 NLS 凭证"""
-        placeholders = ('your-', 'your_', 'changeme', 'xxx', '')
-        return (self._ak_id and self._app_key
-                and not any(p in self._ak_id.lower() for p in placeholders)
-                and not any(p in self._app_key.lower() for p in placeholders))
-
-    def _get_nls_token(self) -> str:
-        """获取阿里云 NLS Token（有效期 24h，缓存复用）"""
-        now = datetime.utcnow().timestamp()
-        if self._nls_token and now < self._nls_token_expire - 300:
-            return self._nls_token
-
-        try:
-            import requests
-
-            # NLS Token API 需要 AK/SK 签名
-            # 简化为直接调用（完整签名需要 aliyun-python-sdk-core）
-            resp = requests.post(
-                f'{self.NLS_HOST}/v1/token',
-                json={'appkey': self._app_key, 'ak_id': self._ak_id, 'ak_secret': self._ak_secret},
-                timeout=10
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                self._nls_token = data.get('token', '')
-                # 默认 24h 过期
-                self._nls_token_expire = now + 24 * 3600
-                logger.info('NLS Token 获取成功')
-                return self._nls_token
-        except Exception as e:
-            logger.warning('NLS Token 获取失败: %s', e)
-
-        return ''
+    def _has_key(self) -> bool:
+        return bool(self._api_key) and self._api_key != 'your-dashscope-api-key'
 
     # ---- 主入口 ----
 
     def evaluate(self, audio_url: str, reference_text: str = '', duration: int = 0) -> dict:
         """
-        评测音频 — 三层降级
-        返回 {'success': bool, 'score': int, 'dimensions': dict, 'feedback': str}
+        评测音频 — 真实 AI 评测（带降级）
+        返回 {'success': bool, 'score': int, 'dimensions': dict, 'feedback': str,
+              'transcription': str, 'ai_powered': bool}
         """
         self._ensure_init()
 
-        # Level 1: 阿里云 NLS 语音评测（需要凭证 + Token）
-        if self._has_nls_credentials():
+        # Level 1: ASR 转写 + Qwen 五维点评
+        if self._has_key():
             try:
-                result = self._evaluate_via_nls(audio_url, reference_text, duration)
-                if result and result.get('success'):
-                    return result
+                transcription = self._transcribe(audio_url)
+                if transcription is not None:
+                    result = self._evaluate_with_qwen(transcription, reference_text, duration)
+                    if result and result.get('success'):
+                        result['transcription'] = transcription
+                        result['ai_powered'] = True
+                        return result
             except Exception as e:
-                logger.warning('NLS 评测失败，降级到 Qwen: %s', e)
+                logger.warning('真实评测失败，降级: %s', e)
 
-        # Level 2: DashScope Qwen 多模态 / 文本评测
-        if dashscope.api_key:
-            try:
-                result = self._evaluate_via_qwen(audio_url, reference_text, duration)
-                if result and result.get('success'):
-                    return result
-            except Exception as e:
-                logger.warning('Qwen 评测失败，降级到本地: %s', e)
-
-        # Level 3: 本地规则评测
-        return self._evaluate_local(duration)
-
-    # ---- Level 1: NLS Speech Evaluation ----
-
-    def _evaluate_via_nls(self, audio_url: str, reference_text: str, duration: int) -> dict:
-        """
-        通过阿里云智能语音交互 NLS API 进行语音评测
-        使用 FileTrans 评测模式 — 提交录音文件，获取评测结果
-        """
-        token = self._get_nls_token()
-        if not token:
-            return None
-
-        try:
-            # NLS 语音评测 REST API
-            # 文档: https://help.aliyun.com/document_detail/...
-            headers = {
-                'X-NLS-Token': token,
-                'Content-Type': 'application/json'
-            }
-
-            payload = {
-                'appkey': self._app_key,
-                'audio_url': audio_url,
-                'text': reference_text[:200] if reference_text else '',
-                'format': 'mp3',
-                'sample_rate': 16000
-            }
-
-            resp = requests.post(
-                f'{self.NLS_HOST}/v1/assessments',
-                json=payload,
-                headers=headers,
-                timeout=30
-            )
-
-            if resp.status_code == 200:
-                data = resp.json()
-                return self._parse_nls_result(data, duration)
-            else:
-                logger.warning('NLS 评测 API 返回 %s: %s', resp.status_code, resp.text[:200])
-                return None
-
-        except requests.exceptions.Timeout:
-            logger.warning('NLS 评测请求超时')
-            return None
-        except Exception as e:
-            logger.warning('NLS 评测异常: %s', e)
-            return None
-
-    def _parse_nls_result(self, data: dict, duration: int) -> dict:
-        """解析 NLS 评测结果"""
-        # NLS 返回格式: {result: {score, details: [...], suggestion: ...}}
-        result = data.get('result', data)
-        if not result:
-            return None
-
-        score_val = result.get('score', 0)
-        if isinstance(score_val, (int, float)):
-            score = min(98, max(30, int(score_val)))
-        else:
-            score = self._evaluate_local(duration)['score']
-
-        # 解析各维度分数
-        details = result.get('details', [])
-        dimensions = {
-            'pronunciation': 60,
-            'fluency': 60,
-            'completeness': 60,
-            'content': 60,
-            'expressiveness': 60
-        }
-
-        dim_map = {
-            'pronunciation': ['pronunciation', 'accuracy', '发音'],
-            'fluency': ['fluency', '流利度'],
-            'completeness': ['completeness', '完整度', 'integrity'],
-            'content': ['content', '内容', 'relevance'],
-            'expressiveness': ['expressiveness', '表现力', 'emotion']
-        }
-
-        for detail in details:
-            name = detail.get('name', '').lower()
-            val = detail.get('score', 0)
-            for dim_key, aliases in dim_map.items():
-                if any(a in name for a in aliases):
-                    dimensions[dim_key] = min(98, max(30, int(val)))
-                    break
-
-        feedback = result.get('suggestion', '') or self._generate_feedback(score, dimensions)
-
-        return {
-            'success': True,
-            'score': score,
-            'dimensions': dimensions,
-            'feedback': feedback
-        }
-
-    # ---- Level 2: Qwen 多模态 ----
-
-    def _evaluate_via_qwen(self, audio_url: str, reference_text: str, duration: int) -> dict:
-        """
-        通过 Qwen 能力评测音频
-        使用文本分析 + Qwen 生成自然反馈
-        """
-        # 本地评分作为基础
+        # Level 3: 本地规则兜底（无 AI）
         local = self._evaluate_local(duration)
-
-        # 用 Qwen 生成更自然的反馈
-        try:
-            from dashscope import Generation
-
-            dim_text = ', '.join([f'{k}={v}分' for k, v in local['dimensions'].items()])
-            prompt = f"""你是口才训练教练。请对以下录音表现给出50字以内的鼓励性反馈：
-
-参考文本：{reference_text[:100] if reference_text else '自由练习'}
-录音时长：{duration}秒
-各维度评分：{dim_text}
-综合评分：{local['score']}分
-
-要求：先肯定优点，再给出1条具体可操作的改进建议。不要重复评分数字。"""
-
-            resp = Generation.call(
-                model='qwen-turbo',
-                prompt=prompt,
-                result_format='message',
-                max_tokens=150
-            )
-
-            if resp.status_code == 200:
-                feedback = resp.output.choices[0].message.content.strip()
-                local['feedback'] = feedback
-        except Exception:
-            pass
-
+        local['transcription'] = ''
+        local['ai_powered'] = False
         return local
 
-    # ---- Level 3: 本地规则评测 ----
+    # ---- ASR 转写 ----
+
+    def _resolve_asr_input(self, audio_url: str) -> str:
+        """把 audio_url 解析为 Paraformer 可用的输入（必须是公网可访问 URL 或 OSS URL）
+
+        Paraformer 文件转写不支持 file:// 本地路径（会 DECODE_ERROR），
+        因此本地存储的音频需通过公网 URL 暴露（cloudflared 隧道 / 固定域名 / OSS）。
+        """
+        from ..services.oss_client import is_oss_url, get_absolute_path
+
+        # OSS / 公网 URL 直接用
+        if is_oss_url(audio_url) or audio_url.startswith('http'):
+            return audio_url
+
+        # 本地相对路径 -> 拼公网 URL
+        clean = audio_url.lstrip('/')
+        if clean.startswith('api/upload/'):
+            clean = clean[len('api/upload/'):]
+        public_base = os.environ.get('PUBLIC_BASE_URL', '').rstrip('/')
+        if public_base:
+            return f'{public_base}/api/upload/{clean}'
+
+        # 兜底：用本地绝对路径（多数情况会 DECODE_ERROR，仅作降级）
+        abs_path = get_absolute_path(clean)
+        if os.path.exists(abs_path):
+            return f'file://{abs_path}'
+        return audio_url
+
+    def _transcribe(self, audio_url: str) -> str | None:
+        """Paraformer-v2 转写，返回文本或 None"""
+        file_ref = self._resolve_asr_input(audio_url)
+        try:
+            resp = Transcription.call(
+                model=self.ASR_MODEL,
+                file_urls=[file_ref],
+                language='zh',
+                api_key=self._api_key,
+            )
+            if resp.status_code != 200:
+                logger.warning('ASR 提交失败: %s', resp.message)
+                return None
+            # 等待结果
+            final = Transcription.wait(resp.output.task_id, api_key=self._api_key)
+            # 解析结果（paraformer-v2 结果在 results[].results[] 或 transcription_url）
+            results = final.output.get('results', [])
+            if not results:
+                return None
+            sentences = []
+            for r in results:
+                for sub in r.get('results', []):
+                    # 优先取 transcript 字段
+                    txt = sub.get('transcript', '')
+                    if txt:
+                        sentences.append(txt)
+                    # 若有 transcription_url，下载 JSON 取真实转写
+                    turl = sub.get('transcription_url') or r.get('transcription_url')
+                    if not txt and turl:
+                        try:
+                            import json as _json
+                            import urllib.request
+                            with urllib.request.urlopen(turl, timeout=15) as resp:
+                                data = _json.loads(resp.read().decode('utf-8'))
+                            # 兼容多种返回结构
+                            if isinstance(data, dict):
+                                # paraformer-v2 标准: {transcripts:[{text, sentences:[{text}]}]}
+                                for tr in data.get('transcripts', []):
+                                    subs = tr.get('sentences')
+                                    if subs:
+                                        sentences_text = ''.join(
+                                            s.get('text', '') for s in subs
+                                        ).strip()
+                                        if sentences_text:
+                                            sentences.append(sentences_text)
+                                            continue
+                                    if tr.get('text'):
+                                        sentences.append(tr['text'])
+                                # 兜底顶层 text
+                                if not sentences and data.get('text'):
+                                    sentences.append(data['text'])
+                            elif isinstance(data, list):
+                                for item in data:
+                                    sentences.append(item.get('text', '') or item.get('transcript', ''))
+                        except Exception as ex:
+                            logger.warning('下载 transcription_url 失败: %s', ex)
+            text = ''.join(sentences).strip()
+            return text or None
+        except Exception as e:
+            logger.warning('ASR 异常: %s', e)
+            return None
+
+    # ---- Qwen 五维点评 ----
+
+    def _evaluate_with_qwen(self, transcription: str, reference_text: str, duration: int) -> dict:
+        """用 Qwen 基于转写 + 参考文本评五维 + 反馈"""
+        from dashscope import Generation
+
+        prompt = self._build_eval_prompt(transcription, reference_text, duration)
+        try:
+            resp = Generation.call(
+                model=self.FEEDBACK_MODEL,
+                messages=[{'role': 'user', 'content': prompt}],
+                result_format='message',
+                temperature=0.6,
+                max_tokens=800,
+            )
+            if resp.status_code != 200:
+                logger.warning('Qwen 点评失败: %s', resp.message)
+                return None
+            content = resp.output.choices[0].message.content.strip()
+            return self._parse_qwen_result(content, duration)
+        except Exception as e:
+            logger.warning('Qwen 调用异常: %s', e)
+            return None
+
+    def _build_eval_prompt(self, transcription: str, reference_text: str, duration: int) -> str:
+        ref_block = f"【参考文本/题目】{reference_text}\n" if reference_text else "【参考文本/题目】无（自由练习）\n"
+        return f"""你是一位严格的口才教练，请对学员的语音练习做专业评测。
+
+{ref_block}【学员录音转写内容】
+{transcription}
+
+【录音时长】{duration}秒
+
+请按以下要求输出：
+1. 对五个维度各打 0-100 分：发音准确度(pronunciation)、语速流畅度(fluency)、内容完整度(completeness)、内容质量(content)、表达感染力(expressiveness)
+2. 给出综合评分（0-100，五维加权平均偏严）
+3. 用一句总评 + 2-3 条具体可操作的改进建议
+
+严格按以下 JSON 格式返回（不要任何额外说明文字）：
+{{
+  "dimensions": {{
+    "pronunciation": <int>,
+    "fluency": <int>,
+    "completeness": <int>,
+    "content": <int>,
+    "expressiveness": <int>
+  }},
+  "score": <int>,
+  "feedback": "<总评+建议，中文，200字内>"
+}}"""
+
+    def _parse_qwen_result(self, content: str, duration: int) -> dict:
+        """解析 Qwen 返回的 JSON（容错）"""
+        # 提取 JSON 块
+        m = re.search(r'\{.*\}', content, re.DOTALL)
+        if not m:
+            # 解析失败，用本地规则兜底但保留 AI 反馈文本
+            local = self._evaluate_local(duration)
+            local['feedback'] = content[:200]
+            return local
+        try:
+            import json
+            data = json.loads(m.group(0))
+            dims = data.get('dimensions', {})
+            dimensions = {}
+            for d in DIMENSIONS:
+                v = dims.get(d)
+                if isinstance(v, (int, float)):
+                    dimensions[d] = min(98, max(30, int(v)))
+                else:
+                    dimensions[d] = 60
+            # 确保五维齐全
+            for d in DIMENSIONS:
+                dimensions.setdefault(d, 60)
+            score = data.get('score')
+            if not isinstance(score, (int, float)):
+                score = round(sum(dimensions.values()) / len(dimensions))
+            else:
+                score = min(98, max(30, int(score)))
+            feedback = data.get('feedback', '') or self._generate_feedback(score, dimensions)
+            return {
+                'success': True,
+                'score': score,
+                'dimensions': dimensions,
+                'feedback': feedback,
+            }
+        except Exception:
+            local = self._evaluate_local(duration)
+            local['feedback'] = content[:200]
+            return local
+
+    # ---- Level 3: 本地规则（兜底，无 AI） ----
 
     def _evaluate_local(self, duration: int) -> dict:
-        """
-        本地规则评测（无需 API Key）
-        基于录音时长、内容合理性等客观指标给出评分
-        """
-        # 基础分 60 — 默认及格水平
+        """本地规则评测（无 API 时兜底）"""
         base = 60
-
-        # 时长评估（秒）
         if duration >= 120:
-            duration_bonus = 18  # 2分钟以上，优秀
+            duration_bonus = 18
         elif duration >= 90:
             duration_bonus = 14
         elif duration >= 60:
-            duration_bonus = 10  # 1-2分钟，良好
+            duration_bonus = 10
         elif duration >= 30:
-            duration_bonus = 5   # 30-60秒，达标
+            duration_bonus = 5
         elif duration >= 15:
-            duration_bonus = 0   # 偏短
+            duration_bonus = 0
         elif duration >= 5:
             duration_bonus = -5
         else:
-            duration_bonus = -10  # 太短
+            duration_bonus = -10
 
         overall = min(98, max(35, base + duration_bonus))
 
-        # 基于时长分布的维度打分（不同维度受时长影响不同）
-        # 避免使用 random.seed(duration) — 改用确定性但合理的分布
-        # 发音：受时长影响较小（基础分稳定）
-        pronunciation = min(98, max(35, overall + self._dim_offset(duration, 'pronunciation')))
-        # 流利度：受时长影响中等
-        fluency = min(98, max(35, overall + self._dim_offset(duration, 'fluency')))
-        # 完整度：受时长影响最大（时间越长内容越完整）
-        completeness = min(98, max(35, overall + self._dim_offset(duration, 'completeness')))
-        # 内容：受时长影响中等
-        content = min(98, max(35, overall + self._dim_offset(duration, 'content')))
-        # 表现力：相对独立
-        expressiveness = min(98, max(35, overall + self._dim_offset(duration, 'expressiveness')))
-
-        dimensions = {
-            'pronunciation': pronunciation,
-            'fluency': fluency,
-            'completeness': completeness,
-            'content': content,
-            'expressiveness': expressiveness
-        }
+        import math
+        dimensions = {}
+        for d in DIMENSIONS:
+            seed = duration * 7 + hash(d) % 100
+            offset = int(round(math.sin(seed * 0.618) * 5))
+            dimensions[d] = min(98, max(35, overall + offset))
 
         feedback = self._generate_feedback(overall, dimensions)
-
         return {
             'success': True,
             'score': overall,
             'dimensions': dimensions,
-            'feedback': feedback
+            'feedback': feedback,
         }
 
-    def _dim_offset(self, duration: int, dim: str) -> int:
-        """
-        基于时长和维度计算偏移量（确定性，无随机）
-        不同维度有不同的时长敏感度
-        """
-        # 用 duration + dim hash 生成确定性偏移
-        seed = duration * 7 + hash(dim) % 100
-        # 正弦函数映射到 [-4, 6] 范围 — 偏正向，避免分数过低
-        import math
-        raw = math.sin(seed * 0.618) * 5
-        return int(round(raw))
-
     def _generate_feedback(self, score: int, dimensions: dict = None) -> str:
-        """根据评分生成反馈文本"""
         dims = dimensions or {}
         avg = sum(dims.values()) / len(dims) if dims else score
-
-        # 找出最强和最弱维度
         if dims:
-            best = max(dims, key=dims.get)
             weak = min(dims, key=dims.get)
-            dim_names = {
-                'pronunciation': '发音准确度',
-                'fluency': '语速流畅度',
-                'completeness': '内容完整度',
-                'content': '内容质量',
-                'expressiveness': '表达感染力'
-            }
+            weak_cn = DIM_CN.get(weak, weak)
         else:
-            best = weak = None
-            dim_names = {}
-
+            weak_cn = ''
         if avg >= 85:
-            feedback = '非常棒！表达清晰流畅，内容完整充实。'
-            if weak and dim_names.get(weak):
-                feedback += f'在{dim_names[weak]}方面再稍加打磨，就更完美了！'
-            feedback += '可以尝试更有挑战性的题目。'
+            return f'整体表现优秀！各维度均衡且突出。建议在{weak_cn}上再精细化打磨，冲击更高水准。'
         elif avg >= 75:
-            feedback = '整体表现不错！发音清晰，内容完整。'
-            if weak and dim_names.get(weak):
-                feedback += f'建议重点关注{dim_names[weak]}的练习。'
-            feedback += '在关键句前适当停顿，能增强表达的节奏感。'
+            return f'表现不错，基础扎实。重点打磨{weak_cn}，配合停顿和重音能让表达更有层次。'
         elif avg >= 65:
-            feedback = '基础良好，还有提升空间。'
-            if best and dim_names.get(best):
-                feedback += f'{dim_names[best]}是你的优势，保持住！'
-            feedback += '建议多练发音准确性和语速控制，录音前先梳理要点。'
+            return f'已有良好基础。建议加强{weak_cn}练习，录音前先梳理逻辑框架，表达会更从容。'
         elif avg >= 50:
-            feedback = '正在进阶中！建议从短句跟读开始，逐步提高语速和流畅度。每天坚持打卡，进步会很快！'
+            return '正在稳步进阶！从短句跟读开始，逐步提升语速与流畅度，每天打卡进步会很明显。'
         else:
-            feedback = '起步阶段，每一点进步都值得鼓励！建议从30秒短句开始，先确保发音准确，再追求流畅。坚持就是胜利！'
-
-        return feedback
+            return '起步阶段，每一份练习都值得肯定！建议从30秒短句起步，先保发音准确，再追流畅。'
 
 
 # 单例
