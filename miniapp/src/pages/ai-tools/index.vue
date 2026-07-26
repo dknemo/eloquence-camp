@@ -206,7 +206,7 @@ onShow(lq)
   margin-bottom: 20rpx;
   box-shadow: var(--card-shadow);
 }
-.quota-num { color: #E31837; font-weight: bold; font-size: 28rpx; }
+.quota-num { color: var(--accent-red); font-weight: bold; font-size: 28rpx; }
 
 .scene-scroll { white-space: nowrap; margin-bottom: 20rpx; width: 100%; }
 .scene-chip {
@@ -263,7 +263,7 @@ onShow(lq)
   margin-bottom: 16rpx;
   text-align: center;
 }
-.tb { font-weight: bold; color: #E31837; }
+.tb { font-weight: bold; color: var(--accent-red); }
 
 .gen-btn {
   width: 100%;

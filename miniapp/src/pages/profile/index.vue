@@ -115,7 +115,7 @@ onShow(() => { load(); isDark.value = !!uni.getStorageSync('dark_mode') })
   border-radius: 24rpx;
   overflow: hidden;
   margin-bottom: 24rpx;
-  box-shadow: 0 8rpx 24rpx rgba(160, 216, 239, 0.35);
+  box-shadow: 0 8rpx 24rpx rgba(79, 70, 229, 0.10);
 }
 .profile-bg {
   position: absolute;
@@ -133,7 +133,7 @@ onShow(() => { load(); isDark.value = !!uni.getStorageSync('dark_mode') })
 .av {
   width: 96rpx; height: 96rpx;
   border-radius: 50%;
-  border: 4rpx solid rgba(160, 216, 239, 0.45);
+  border: 4rpx solid rgba(79, 70, 229, 0.10);
   background: rgba(255, 255, 255, 0.6);
   flex-shrink: 0;
 }
@@ -146,7 +146,7 @@ onShow(() => { load(); isDark.value = !!uni.getStorageSync('dark_mode') })
   z-index: 1;
   display: flex;
   align-items: center;
-  background: rgba(160, 216, 239, 0.22);
+  background: rgba(79, 70, 229, 0.05);
   padding: 20rpx 0;
 }
 .usi { flex: 1; text-align: center; min-width: 0; }

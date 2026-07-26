@@ -137,7 +137,7 @@ onLoad(load)
   border-radius: 40rpx;
   padding: 6rpx;
   margin-bottom: 20rpx;
-  box-shadow: 0 4rpx 20rpx rgba(160, 216, 239, 0.35);
+  box-shadow: 0 4rpx 20rpx var(--card-shadow);
 }
 .tab {
   flex: 1;
@@ -182,7 +182,7 @@ onLoad(load)
   background: #fff;
   border-radius: 20rpx;
   padding: 24rpx 16rpx;
-  box-shadow: 0 4rpx 20rpx rgba(160, 216, 239, 0.35);
+  box-shadow: 0 4rpx 20rpx var(--card-shadow);
   flex: 1;
   max-width: 200rpx;
   min-width: 0;
@@ -198,7 +198,7 @@ onLoad(load)
   background: #fff;
   border-radius: 24rpx;
   padding: 8rpx 24rpx;
-  box-shadow: 0 4rpx 20rpx rgba(160, 216, 239, 0.35);
+  box-shadow: 0 4rpx 20rpx var(--card-shadow);
 }
 .rank-item {
   display: flex;

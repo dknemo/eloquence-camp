@@ -2,13 +2,13 @@
  * uni.request 封装 — 自动注入Token / 统一错误处理
  */
 // #ifdef MP-WEIXIN
-const BASE_URL = 'https://bunny-recommends-frank-presently.trycloudflare.com/api'
+const BASE_URL = 'http://192.168.200.214:5000/api'
 // #endif
 
 // #ifndef MP-WEIXIN
 const BASE_URL = 'https://api.your-domain.com/api'
 // #endif
-const TIMEOUT = 8000
+const TIMEOUT = 20000
 
 function request(options = {}) {
   return new Promise((resolve, reject) => {
@@ -52,6 +52,10 @@ function request(options = {}) {
 }
 
 export const BASE_API = BASE_URL
+
+export function getBaseUrl() {
+  return BASE_URL
+}
 
 export default {
   get: (url, params, opts) => {

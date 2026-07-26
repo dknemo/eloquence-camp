@@ -3,7 +3,7 @@
 """
 from flask import Flask
 
-from . import ai_speech, ai_text, auth, checkin, training, upload, user
+from . import ai_speech, ai_text, auth, checkin, jixun, training, upload, user
 from .admin import admin_bp
 
 
@@ -15,6 +15,7 @@ def register_blueprints(app: Flask):
     app.register_blueprint(checkin.bp, url_prefix='/api/checkin')
     app.register_blueprint(ai_text.bp, url_prefix='/api/ai-text')
     app.register_blueprint(ai_speech.bp, url_prefix='/api/ai-speech')
+    app.register_blueprint(jixun.bp, url_prefix='/api/jixun')
     app.register_blueprint(user.bp, url_prefix='/api/user')
     app.register_blueprint(upload.bp, url_prefix='/api/upload')
 

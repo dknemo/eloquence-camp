@@ -12,3 +12,6 @@ from .training import TrainingItem
 
 # 基础表（无外键依赖）
 from .user import User, UserQuota
+
+# 集训打卡模块
+from .jixun import JixunEvent, JixunSignup, JixunRecord  # noqa: F401

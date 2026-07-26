@@ -62,7 +62,7 @@ function draw() {
       else ctx.lineTo(x, y)
     }
     ctx.closePath()
-    ctx.setStrokeStyle('#e8f6fc')
+    ctx.setStrokeStyle('#EEF2FF')
     ctx.setLineWidth(1)
     ctx.stroke()
   }
@@ -72,7 +72,7 @@ function draw() {
     ctx.beginPath()
     ctx.moveTo(cx, cy)
     ctx.lineTo(cx + R * Math.cos(ang), cy + R * Math.sin(ang))
-    ctx.setStrokeStyle('#e8f6fc')
+    ctx.setStrokeStyle('#EEF2FF')
     ctx.stroke()
   }
 
@@ -85,9 +85,9 @@ function draw() {
     else ctx.lineTo(x, y)
   })
   ctx.closePath()
-  ctx.setFillStyle('rgba(160, 216, 239, 0.45)')
+  ctx.setFillStyle('rgba(79, 70, 229, 0.12)')
   ctx.fill()
-  ctx.setStrokeStyle('#5BA8CF')
+  ctx.setStrokeStyle('#4F46E5')
   ctx.setLineWidth(2)
   ctx.stroke()
 
@@ -97,7 +97,7 @@ function draw() {
     const y = cy + R * v * Math.sin(ang)
     ctx.beginPath()
     ctx.arc(x, y, 4, 0, 2 * Math.PI)
-    ctx.setFillStyle('#5BA8CF')
+    ctx.setFillStyle('#4F46E5')
     ctx.fill()
   })
 

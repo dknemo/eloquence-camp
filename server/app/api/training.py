@@ -90,3 +90,57 @@ def get_item(item_id):
                 'created_at': last.created_at.isoformat() if last.created_at else None,
             }
     return ok(data)
+
+
+@bp.route('/reviews', methods=['GET'])
+def review_list():
+    """训练复盘列表 — 返回用户的练习记录及AI点评"""
+    from ..models.common import PracticeRecord
+    from ..models.training import TrainingItem
+
+    user = _current_user()
+    if not user:
+        return fail(401, '请先登录')
+
+    page = request.args.get('page', 1, type=int)
+    page_size = request.args.get('page_size', 20, type=int)
+    keyword = request.args.get('keyword')
+    success_filter = request.args.get('success')
+
+    query = PracticeRecord.query.filter_by(user_id=user.id)\
+        .order_by(PracticeRecord.created_at.desc())
+
+    if keyword:
+        query = query.join(TrainingItem, PracticeRecord.training_item_id == TrainingItem.id, isouter=True)\
+            .filter(TrainingItem.title.contains(keyword))
+
+    if success_filter is not None:
+        is_success = success_filter.lower() == 'true'
+        if is_success:
+            query = query.filter(PracticeRecord.ai_score >= 60)
+        else:
+            query = query.filter(db.or_(PracticeRecord.ai_score < 60, PracticeRecord.ai_score.is_(None)))
+
+    total = query.count()
+    records = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    items = []
+    for r in records:
+        title = '练习'
+        training_item_id = r.training_item_id
+        if training_item_id:
+            ti = TrainingItem.query.get(training_item_id)
+            if ti:
+                title = ti.title
+        items.append({
+            'id': r.id,
+            'training_item_id': training_item_id,
+            'title': title,
+            'ai_score': r.ai_score,
+            'ai_feedback': r.ai_feedback,
+            'duration': r.duration,
+            'success': r.ai_score is not None and r.ai_score >= 60,
+            'created_at': r.created_at.isoformat() if r.created_at else None,
+        })
+
+    return ok({'items': items, 'total': total, 'page': page, 'page_size': page_size})

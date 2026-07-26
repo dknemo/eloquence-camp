@@ -1,6 +1,6 @@
 {
   "name": "口才训练营",
-  "appid": "__UNI__XXXXXX",
+  "appid": "wx2c40c09ae7fd6906",
   "description": "每日科学练口才，自信表达看得见",
   "versionName": "1.0.0",
   "versionCode": "100",
@@ -18,13 +18,10 @@
     }
   },
   "mp-weixin": {
-    "appid": "",
+    "appid": "wx2c40c09ae7fd6906",
     "setting": { "urlCheck": false },
     "usingComponents": true,
-    "permission": {
-      "scope.record": { "desc": "需要使用录音功能进行口才练习" }
-    },
-    "requiredPrivateInfos": ["getLocation", "chooseAddress"],
+    "requiredPrivateInfos": [],
     "lazyCodeLoading": "requiredComponents"
   },
   "uniStatistics": { "enable": false },

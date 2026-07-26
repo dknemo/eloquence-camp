@@ -40,7 +40,8 @@ async function doLogin() {
       url: getBaseUrl() + '/auth/wechat-login',
       method: 'POST',
       data: { code },
-      header: { 'Content-Type': 'application/json' }
+      header: { 'Content-Type': 'application/json' },
+      timeout: 20000
     })
 
     if (resp.statusCode === 200 && resp.data.code === 200) {
@@ -61,7 +62,7 @@ async function doLogin() {
 
 function getBaseUrl() {
   // #ifdef MP-WEIXIN
-  return 'https://bunny-recommends-frank-presently.trycloudflare.com/api'
+  return 'http://192.168.200.214:5000/api'
   // #endif
   // #ifndef MP-WEIXIN
   return 'https://api.your-domain.com/api'

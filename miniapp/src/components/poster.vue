@@ -1,7 +1,7 @@
 <template>
 <view v-if="visible" class="poster-mask" @tap="close">
   <view class="poster-modal" @tap.stop>
-    <canvas canvas-id="posterCanvas" :style="{width:canvasW+'px',height:canvasH+'px'}"></canvas>
+    <canvas canvas-id="posterCanvas" class="poster-canvas" :style="{width:canvasW+'px',height:canvasH+'px'}"></canvas>
     <view class="poster-actions">
       <button size="mini" type="primary" @tap="savePoster" class="btn-save">保存到相册</button>
       <button size="mini" @tap="close" class="btn-cancel">关闭</button>
@@ -154,7 +154,7 @@ function close(){emit('close')}
 <style scoped>
 .poster-mask{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column}
 .poster-modal{background:#fff;border-radius:16rpx;padding:20rpx;display:flex;flex-direction:column;align-items:center;max-width:90vw}
-canvas{border-radius:8rpx}
+.poster-canvas{border-radius:8rpx}
 .poster-actions{display:flex;gap:20rpx;margin-top:20rpx}
 .btn-save{background:#FF6B35!important;color:#fff!important;border:none!important}
 .btn-cancel{background:#f0f0f0!important;color:#666!important;border:none!important}

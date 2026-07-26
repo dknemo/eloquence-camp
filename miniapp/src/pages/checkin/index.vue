@@ -182,7 +182,7 @@ async function requestSubscribe() {
   border-radius: 24rpx;
   padding: 36rpx 0;
   margin-bottom: 20rpx;
-  box-shadow: 0 8rpx 24rpx rgba(160, 216, 239, 0.4);
+  box-shadow: 0 8rpx 24rpx rgba(79, 70, 229, 0.12);
 }
 .si { flex: 1; text-align: center; color: #fff; min-width: 0; position: relative; }
 .si + .si::before {
@@ -241,7 +241,7 @@ async function requestSubscribe() {
 .task-body { flex: 1; min-width: 0; }
 .tt { font-size: 28rpx; font-weight: 600; display: block; color: var(--text-primary); }
 .tsb { font-size: 22rpx; color: var(--text-hint); display: block; margin-top: 4rpx; }
-.tsc { font-size: 22rpx; color: #E31837; margin-top: 6rpx; display: block; font-weight: 500; }
+.tsc { font-size: 22rpx; color: var(--accent-red); margin-top: 6rpx; display: block; font-weight: 500; }
 .task-arrow { color: var(--text-hint); font-size: 32rpx; flex-shrink: 0; margin-left: 8rpx; }
 
 .goal-card {
